@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Diminishing Interest Demo</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
+    body{max-width:900px;margin:28px auto;padding:18px}
+    .card{border:1px solid #e3e3e3;border-radius:10px;padding:18px;box-shadow:0 6px 18px rgba(0,0,0,.03)}
+    .row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+    label{display:block;font-size:13px;color:#333}
+    input[type="number"], input[type="range"]{padding:8px;border-radius:6px;border:1px solid #ccc}
+    button{padding:10px 14px;border-radius:8px;border:0;background:#0b76ff;color:white;cursor:pointer}
+    button:disabled{opacity:.5}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{border:1px solid #eee;padding:8px;text-align:right}
+    th{background:#fafafa}
+    .current{font-size:20px;font-weight:700;margin-top:8px}
+    .controls{display:flex;gap:8px;align-items:end}
+    .small{font-size:13px;color:#666}
+  </style>
+</head>
+<body>
+  <h1>Diminishing Interest (percent-per-period) — Demo</h1>
+  <div class="card">
+    <div class="row">
+      <div style="flex:1;min-width:160px">
+        <label>Starting value</label>
+        <input id="startVal" type="number" step="0.01" value="1350" />
+      </div>
+      <div style="width:180px">
+        <label>Rate per period (%)</label>
+        <input id="rate" type="number" step="0.01" value="1" />
+      </div>
+      <div style="width:160px">
+        <label>Periods (months)</label>
+        <input id="periods" type="number" step="1" value="12" />
+      </div>
+      <div style="width:220px">
+        <label>Animation speed (ms between steps)</label>
+        <input id="speed" type="range" min="50" max="2000" value="350" />
+        <div class="small">Current: <span id="speedVal">350</span> ms</div>
+      </div>
+    </div>
+
+    <div class="row controls">
+      <button id="startBtn">Start</button>
+      <button id="pauseBtn" disabled>Pause</button>
+      <button id="resetBtn">Reset</button>
+      <div style="margin-left:auto">
+        <div class="small">Current value</div>
+        <div class="current">₱ <span id="current">1350.00</span></div>
+      </div>
+    </div>
+
+    <div style="margin-top:10px">
+      <table id="table">
+        <thead>
+          <tr><th style="text-align:left">Period</th><th>Starting balance</th><th>Interest</th><th>Ending balance</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const startValEl = document.getElementById('startVal');
+    const rateEl = document.getElementById('rate');
+    const periodsEl = document.getElementById('periods');
+    const speedEl = document.getElementById('speed');
+    const speedVal = document.getElementById('speedVal');
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const currentEl = document.getElementById('current');
+    const tbody = document.querySelector('#table tbody');
+
+    let timer = null;
+    let i = 0;
+    let balances = [];
+
+    function format(n){
+      return Number(n).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+    }
+
+    function computeSeries(){
+      const v0 = parseFloat(startValEl.value) || 0;
+      const r = (parseFloat(rateEl.value) || 0)/100;
+      const N = Math.max(0, Math.floor(parseInt(periodsEl.value) || 0));
+
+      const rows = [];
+      let bal = v0;
+      for(let p=1;p<=N;p++){
+        const interest = bal * r;
+        const end = bal - interest; // "deduct by percent" behavior
+        rows.push({period:p, start:bal, interest:interest, end:end});
+        bal = end;
+      }
+      return rows;
+    }
+
+    function renderAll(){
+      tbody.innerHTML = '';
+      balances.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td style="text-align:left">${row.period}</td><td>₱ ${format(row.start)}</td><td>₱ ${format(row.interest)}</td><td>₱ ${format(row.end)}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function reset(){
+      clearInterval(timer);
+      timer = null;
+      i = 0;
+      balances = computeSeries();
+      renderAll();
+      currentEl.textContent = format(parseFloat(startValEl.value)||0);
+      startBtn.disabled = false;
+      pauseBtn.disabled = true;
+    }
+
+    function step(){
+      if(i >= balances.length){
+        clearInterval(timer);
+        timer = null;
+        startBtn.disabled = false;
+        pauseBtn.disabled = true;
+        return;
+      }
+      const row = balances[i];
+      // highlight row being processed
+      Array.from(tbody.querySelectorAll('tr')).forEach((tr, idx)=>{
+        tr.style.background = idx === i ? '#fffbea' : '';
+      });
+
+      currentEl.textContent = format(row.end);
+      i++;
+    }
+
+    startBtn.addEventListener('click', ()=>{
+      // recompute in case inputs changed
+      balances = computeSeries();
+      renderAll();
+      i = 0;
+      const ms = parseInt(speedEl.value,10) || 350;
+      if(balances.length === 0) return;
+      startBtn.disabled = true;
+      pauseBtn.disabled = false;
+      step();
+      timer = setInterval(step, ms);
+    });
+
+    pauseBtn.addEventListener('click', ()=>{
+      if(timer){
+        clearInterval(timer);
+        timer = null;
+        pauseBtn.textContent = 'Resume';
+      } else {
+        const ms = parseInt(speedEl.value,10) || 350;
+        timer = setInterval(step, ms);
+        pauseBtn.textContent = 'Pause';
+      }
+    });
+
+    resetBtn.addEventListener('click', ()=>{
+      reset();
+    });
+
+    speedEl.addEventListener('input', ()=>{
+      speedVal.textContent = speedEl.value;
+      if(timer){
+        clearInterval(timer);
+        const ms = parseInt(speedEl.value,10) || 350;
+        timer = setInterval(step, ms);
+      }
+    });
+
+    // init
+    balances = computeSeries();
+    renderAll();
+    currentEl.textContent = format(parseFloat(startValEl.value)||0);
+  </script>
+</body>
+</html>

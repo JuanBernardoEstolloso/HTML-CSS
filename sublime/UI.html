@@ -1,0 +1,93 @@
+# app.py
+# This Flask application serves a prediction model API.
+
+import pandas as pd
+from flask import Flask, request, jsonify
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+import joblib
+import os
+from flask_cors import CORS # Import the CORS extension
+
+# Create a directory to store the model
+if not os.path.exists('model'):
+    os.makedirs('model')
+
+# Check if the model already exists to avoid retraining on every run
+model_filename = 'model/income_model.joblib'
+if not os.path.exists(model_filename):
+    print("Training model...")
+    try:
+        # Load the dataset from the uploaded CSV file.
+        df = pd.read_csv('income_dataset.csv')
+        
+        # Define features (X) and target (y)
+        X = df[['age', 'experience']]
+        y = df['income']
+        
+        # Split the data into training and testing sets (optional but good practice)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        
+        # Initialize and train the linear regression model
+        model = LinearRegression()
+        model.fit(X_train, y_train)
+        
+        # Save the trained model to a file
+        joblib.dump(model, model_filename)
+        print("Model trained and saved successfully.")
+        
+    except FileNotFoundError:
+        print("Error: 'income_dataset.csv' not found. Please ensure the file is in the same directory as the script.")
+        exit()
+    except Exception as e:
+        print(f"An error occurred during model training: {e}")
+        exit()
+
+# Load the trained model
+model = joblib.load(model_filename)
+
+# Initialize the Flask app
+app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
+
+# A simple health check route
+@app.route('/', methods=['GET'])
+def home():
+    return "The income prediction API is running."
+
+# The prediction endpoint
+@app.route('/predict', methods=['POST'])
+def predict():
+    """
+    Accepts JSON data with 'age' and 'experience' and returns a predicted 'income'.
+    
+    Example JSON payload:
+    {
+        "age": 35,
+        "experience": 8
+    }
+    """
+    try:
+        # Get the JSON data from the request body
+        data = request.get_json(force=True)
+        
+        # Extract age and experience
+        age = data['age']
+        experience = data['experience']
+        
+        # Use the model to predict the income
+        prediction = model.predict([[age, experience]])
+        
+        # Return the prediction as a JSON response
+        return jsonify({
+            'predicted_income': round(prediction[0], 2)
+        })
+
+    except KeyError:
+        return jsonify({'error': 'Invalid input. Please provide both "age" and "experience".'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+if __name__ == '__main__':
+    # Run the Flask app
+    app.run(debug=True)

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unified Prediction App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-4">
+    <div class="bg-gray-800 p-8 rounded-xl shadow-lg w-full max-w-xl">
+        <h1 class="text-3xl font-bold mb-6 text-center text-indigo-400">Model Prediction Dashboard</h1>
+
+        <div class="flex justify-center space-x-4 mb-8">
+            <button id="show-salary" class="px-6 py-2 rounded-full font-semibold transition-colors duration-300 bg-gray-600 hover:bg-indigo-500">
+                Salary
+            </button>
+            <button id="show-income" class="px-6 py-2 rounded-full font-semibold transition-colors duration-300 bg-gray-600 hover:bg-indigo-500">
+                Income
+            </button>
+            <button id="show-sales" class="px-6 py-2 rounded-full font-semibold transition-colors duration-300 bg-gray-600 hover:bg-indigo-500">
+                Sales
+            </button>
+        </div>
+
+        <div id="forms-container" class="relative overflow-hidden h-[300px]">
+            <!-- Salary Prediction Form -->
+            <form id="salary-form" class="absolute inset-0 transition-transform duration-500 transform translate-x-0" onsubmit="event.preventDefault(); predictSalary();">
+                <h2 class="text-xl font-semibold mb-4 text-center">Predict Salary</h2>
+                <div class="mb-4">
+                    <label for="years" class="block text-sm font-medium text-gray-400">Years of Experience</label>
+                    <input type="number" id="years" placeholder="Enter years of experience..." class="mt-1 block w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500" required>
+                </div>
+                <div class="flex justify-center">
+                    <button type="submit" class="w-full sm:w-auto px-6 py-3 rounded-lg font-bold text-lg text-white bg-indigo-500 hover:bg-indigo-600 transition-colors duration-300">
+                        Predict
+                    </button>
+                </div>
+            </form>
+
+            <!-- Income Prediction Form -->
+            <form id="income-form" class="absolute inset-0 transition-transform duration-500 transform translate-x-full" onsubmit="event.preventDefault(); predictIncome();">
+                <h2 class="text-xl font-semibold mb-4 text-center">Predict Income</h2>
+                <div class="mb-4">
+                    <label for="age" class="block text-sm font-medium text-gray-400">Age</label>
+                    <input type="number" id="age" placeholder="Enter age..." class="mt-1 block w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500" required>
+                </div>
+                <div class="mb-4">
+                    <label for="experience" class="block text-sm font-medium text-gray-400">Experience</label>
+                    <input type="number" id="experience" placeholder="Enter experience..." class="mt-1 block w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500" required>
+                </div>
+                <div class="flex justify-center">
+                    <button type="submit" class="w-full sm:w-auto px-6 py-3 rounded-lg font-bold text-lg text-white bg-indigo-500 hover:bg-indigo-600 transition-colors duration-300">
+                        Predict
+                    </button>
+                </div>
+            </form>
+
+            <!-- Sales Prediction Form -->
+            <form id="sales-form" class="absolute inset-0 transition-transform duration-500 transform translate-x-full" onsubmit="event.preventDefault(); predictSales();">
+                <h2 class="text-xl font-semibold mb-4 text-center">Predict Sales</h2>
+                <div class="mb-4">
+                    <label for="tv" class="block text-sm font-medium text-gray-400">TV Ad Spend ($)</label>
+                    <input type="number" id="tv" placeholder="Enter TV spend..." class="mt-1 block w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500" required>
+                </div>
+                <div class="mb-4">
+                    <label for="radio" class="block text-sm font-medium text-gray-400">Radio Ad Spend ($)</label>
+                    <input type="number" id="radio" placeholder="Enter Radio spend..." class="mt-1 block w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500" required>
+                </div>
+                <div class="mb-4">
+                    <label for="newspaper" class="block text-sm font-medium text-gray-400">Newspaper Ad Spend ($)</label>
+                    <input type="number" id="newspaper" placeholder="Enter Newspaper spend..." class="mt-1 block w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500" required>
+                </div>
+                <div class="flex justify-center">
+                    <button type="submit" class="w-full sm:w-auto px-6 py-3 rounded-lg font-bold text-lg text-white bg-indigo-500 hover:bg-indigo-600 transition-colors duration-300">
+                        Predict
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Prediction Result Section -->
+        <div id="result-box" class="mt-6 p-4 rounded-md text-center hidden">
+            <p id="result-message" class="text-xl font-semibold"></p>
+        </div>
+
+        <!-- Modal for error/loading messages -->
+        <div id="message-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center hidden">
+            <div class="bg-gray-800 p-6 rounded-lg shadow-xl text-center max-w-sm mx-auto">
+                <p id="modal-message" class="text-lg text-gray-200"></p>
+                <div class="mt-4">
+                    <button id="close-modal" class="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 transition-colors">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // API endpoint URLs
+        const API_URLS = {
+            salary: 'http://127.0.0.1:5000/predict-salary',
+            income: 'http://127.0.0.1:5000/predict-income',
+            sales: 'http://127.0.0.1:5000/predict-sales'
+        };
+
+        // UI elements
+        const salaryBtn = document.getElementById('show-salary');
+        const incomeBtn = document.getElementById('show-income');
+        const salesBtn = document.getElementById('show-sales');
+        const salaryForm = document.getElementById('salary-form');
+        const incomeForm = document.getElementById('income-form');
+        const salesForm = document.getElementById('sales-form');
+        const resultBox = document.getElementById('result-box');
+        const resultMessage = document.getElementById('result-message');
+        const modal = document.getElementById('message-modal');
+        const modalMessage = document.getElementById('modal-message');
+        const closeModalBtn = document.getElementById('close-modal');
+
+        // Function to show/hide forms
+        function showForm(formId) {
+            const forms = [salaryForm, incomeForm, salesForm];
+            forms.forEach(form => {
+                if (form.id === formId) {
+                    form.style.transform = 'translateX(0)';
+                } else {
+                    form.style.transform = 'translateX(100%)';
+                }
+            });
+            resultBox.classList.add('hidden');
+        }
+
+        // Event listeners for buttons
+        salaryBtn.addEventListener('click', () => showForm('salary-form'));
+        incomeBtn.addEventListener('click', () => showForm('income-form'));
+        salesBtn.addEventListener('click', () => showForm('sales-form'));
+        closeModalBtn.addEventListener('click', () => modal.classList.add('hidden'));
+
+        // Function to show modal message
+        function showModal(message, isError = false) {
+            modalMessage.textContent = message;
+            modal.classList.remove('hidden');
+            resultBox.classList.add('hidden');
+        }
+
+        async function predictSalary() {
+            const years = document.getElementById('years').value;
+            showModal('Predicting salary...', false);
+
+            try {
+                const response = await fetch(API_URLS.salary, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ years: parseFloat(years) })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Something went wrong.');
+                }
+
+                modal.classList.add('hidden');
+                resultMessage.textContent = `Predicted Salary: $${data.predicted_salary.toLocaleString()}`;
+                resultBox.classList.remove('hidden');
+
+            } catch (error) {
+                showModal(`Error: ${error.message}`, true);
+            }
+        }
+
+        async function predictIncome() {
+            const age = document.getElementById('age').value;
+            const experience = document.getElementById('experience').value;
+            showModal('Predicting income...', false);
+
+            try {
+                const response = await fetch(API_URLS.income, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ age: parseFloat(age), experience: parseFloat(experience) })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Something went wrong.');
+                }
+
+                modal.classList.add('hidden');
+                resultMessage.textContent = `Predicted Income: $${data.predicted_income.toLocaleString()}`;
+                resultBox.classList.remove('hidden');
+
+            } catch (error) {
+                showModal(`Error: ${error.message}`, true);
+            }
+        }
+
+        async function predictSales() {
+            const tv = document.getElementById('tv').value;
+            const radio = document.getElementById('radio').value;
+            const newspaper = document.getElementById('newspaper').value;
+            showModal('Predicting sales...', false);
+
+            try {
+                const response = await fetch(API_URLS.sales, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tv: parseFloat(tv), radio: parseFloat(radio), newspaper: parseFloat(newspaper) })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Something went wrong.');
+                }
+
+                modal.classList.add('hidden');
+                resultMessage.textContent = `Predicted Sales: $${data.predicted_sales.toLocaleString()}`;
+                resultBox.classList.remove('hidden');
+
+            } catch (error) {
+                showModal(`Error: ${error.message}`, true);
+            }
+        }
+    </script>
+</body>
+</html>
